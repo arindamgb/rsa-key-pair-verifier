@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>RSA Key Pair Verifier</title>
+    <meta name="description" content="Check if your private and public RSA keys match. Secure, private, and fast.">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        html, body, footer, .form-control, .form-select, .alert, .btn-primary {
+            transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+        }
+
+        /* ---------------- Dark Theme ---------------- */
+        [data-bs-theme="dark"] {
+            background-color: #111927;
+            color: #E0E0E0;
+        }
+
+        [data-bs-theme="dark"] body {
+            background-color: #111927;
+            color: #E0E0E0;
+        }
+
+        [data-bs-theme="dark"] footer {
+            background-color: #111927;
+            color: #A0A0A0;
+        }
+
+        [data-bs-theme="dark"] .form-control,
+        [data-bs-theme="dark"] .form-select {
+            background-color: #1E2733;
+            color: #E0E0E0;
+            border: 1px solid #333;
+        }
+
+        [data-bs-theme="dark"] .alert-success {
+            background-color: #0a403d;
+            color: #4affd3;
+            border-color: #19c1a2;
+        }
+
+        [data-bs-theme="dark"] .alert-danger {
+            background-color: #3a1035;
+            color: #ff94ec;
+            border-color: #d02cfd;
+        }
+
+        [data-bs-theme="dark"] .spinner-border {
+            color: #13EAFF;
+        }
+
+        /* ---------------- Light Theme ---------------- */
+        [data-bs-theme="light"] body {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+
+        [data-bs-theme="light"] footer {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        [data-bs-theme="light"] .form-control,
+        [data-bs-theme="light"] .form-select {
+            background-color: white;
+            color: #212529;
+            border: 1px solid #ced4da;
+        }
+
+        [data-bs-theme="light"] .alert-success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border-color: #badbcc;
+        }
+
+        [data-bs-theme="light"] .alert-danger {
+            background-color: #f8d7da;
+            color: #842029;
+            border-color: #f5c2c7;
+        }
+
+        [data-bs-theme="light"] .spinner-border {
+            color: #0d6efd;
+        }
+
+        /* Shared Styles */
+        .btn-primary {
+            background-image: linear-gradient(90deg, #D02CFD, #13EAFF);
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: background-position 0.3s ease;
+            background-size: 200%;
+            background-position: left;
+        }
+
+        .btn-primary:hover {
+            background-position: right;
+        }
+
+        #result-area {
+            margin-top: 20px;
+        }
+
+        .gradient-title {
+            font-weight: bold;
+            font-size: 2.2rem;
+            background: linear-gradient(90deg, #D02CFD, #13EAFF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle">
+        <button id="themeToggle" class="btn btn-outline-secondary btn-sm">
+            <span id="themeIcon">🌙</span> <span id="themeLabel">Light Mode</span>
+        </button>
+    </div>
+
+    <main class="container mt-5">
+        <div class="text-center mb-4">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="RSA Verifier Logo" style="max-height: 100px;">
+        </div>
+        <h2 class="text-center mb-4 gradient-title">RSA Key Pair Verifier</h2>
+
+        <form id="verifyForm">
+            <div class="mb-3">
+                <label class="form-label">Input Method</label>
+                <select class="form-select" id="inputMethod" name="input_method">
+                    <option value="text" selected>Paste Text</option>
+                    <option value="file">Upload Files</option>
+                </select>
+            </div>
+
+            <div id="text-inputs">
+                <div class="mb-3">
+                    <label for="private_key" class="form-label">Private Key (id_rsa)</label>
+                    <textarea class="form-control" id="private_key" name="private_key" rows="6"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="public_key" class="form-label">Public Key (id_rsa.pub)</label>
+                    <textarea class="form-control" id="public_key" name="public_key" rows="4"></textarea>
+                </div>
+            </div>
+
+            <div id="file-inputs" class="file-upload-section" style="display: none;">
+                <div class="mb-3">
+                    <label for="private_key_file" class="form-label">Upload Private Key File</label>
+                    <input type="file" class="form-control" id="private_key_file" name="private_key_file">
+                </div>
+                <div class="mb-3">
+                    <label for="public_key_file" class="form-label">Upload Public Key File</label>
+                    <input type="file" class="form-control" id="public_key_file" name="public_key_file">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Verify Pair</button>
+        </form>
+
+        <div id="spinner" class="text-center mt-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Verifying...</span>
+            </div>
+        </div>
+
+        <div id="result-area" class="mt-4"></div>
+    </main>
+
+    <footer class="text-center mt-4" style="position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1030;">
+        <div>
+            Made with ❤️ for the community by 
+            <a href="https://www.linkedin.com/in/arindamgb/" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">
+                Arindam Gustavo Biswas
+            </a>
+        </div>
+        <div>
+            <a href="https://github.com/arindamgb/rsa-key-pair-verifier" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">
+                GitHub Repo</a> · 
+            Icon by 
+            <a href="https://www.freepik.com/icon/key_12650989" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">
+                Freepik</a> · 2025
+        </div>
+    </footer>
+
+    <script>
+        const toggleButton = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        function setTheme(theme) {
+            html.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            const isDark = theme === 'dark';
+            document.getElementById('themeLabel').innerText = isDark ? 'Light Mode' : 'Dark Mode';
+            document.getElementById('themeIcon').innerText = isDark ? '🌙' : '☀️';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-bs-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) setTheme(savedTheme);
+
+        const inputMethodSelect = document.getElementById('inputMethod');
+        const textInputs = document.getElementById('text-inputs');
+        const fileInputs = document.getElementById('file-inputs');
+
+        inputMethodSelect.addEventListener('change', () => {
+            const selected = inputMethodSelect.value;
+            textInputs.style.display = selected === 'file' ? 'none' : 'block';
+            fileInputs.style.display = selected === 'file' ? 'block' : 'none';
+
+            // Clear result/spinner when input method changes
+            resultArea.innerHTML = "";
+            spinner.style.display = "none";
+        });
+
+        // AJAX form submission
+        const form = document.getElementById('verifyForm');
+        const spinner = document.getElementById('spinner');
+        const resultArea = document.getElementById('result-area');
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            resultArea.innerHTML = "";
+            spinner.style.display = "block";
+
+            const inputMethod = inputMethodSelect.value;
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                spinner.style.display = "none";
+
+                // const div = document.createElement('div');
+                // div.className = "alert mt-4 " + (result.verified ? "alert-success" : "alert-danger");
+                // div.innerText = result.message;
+                // resultArea.appendChild(div);
+                // Clear previous result
+                resultArea.innerHTML = "";
+
+                // Create result alert
+                const div = document.createElement('div');
+                div.className = "alert mt-4 " + (result.verified ? "alert-success" : "alert-danger");
+                div.innerText = result.message;
+                resultArea.appendChild(div);
+
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (div.parentElement) {
+                        div.classList.add('fade-out');
+                        setTimeout(() => div.remove(), 500); // Wait for fade-out animation
+                    }
+                }, 5000);
+
+            } catch (err) {
+                spinner.style.display = "none";
+                resultArea.innerHTML = `<div class="alert alert-danger mt-4">Something went wrong.</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

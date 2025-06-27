@@ -1,0 +1,19 @@
+# bash
+run.sh
+
+# screenshot
+static/ss.png
+
+# Dockerfile
+Dockerfile
+
+# README
+README.md
+
+# dockerignore
+.dockerignore
+
+# gitignore
+.gitignore
+
+
